@@ -55,9 +55,10 @@ void parseArgs(const char *cmdline, char **argv) {
 }
 
 int main() {
-	int server_fd = connectToHost("comp375.sandiego.edu", 44144);
-	mainLoop(server_fd);
-	close(server_fd);
+	int fd;
+	fd = connectToHost("comp375.sandiego.edu", 44144);
+	mainLoop(fd);
+	close(fd);
 	return 0;
 }
 
@@ -204,7 +205,7 @@ void servefd(int fd, char *buff, size_t buff_len) {
 		printf("Server connection failed, goodbye.\n");
 		exit(1);
 	}
-	else if (send == -1) {
+	else if (message_sent == -1) {
 		perror("send");
 		exit(1);
 	}
@@ -252,7 +253,7 @@ void option(int fd, char *choice) {
 	
 	//Translate time format into readable format for user
 	time_t time;
-	time = strtoul(ret_buff[0],NULL,0);
+	time = strtoul(buff_reset[0],NULL,0);
 	
 	//Format output of messages from program
 	printf("\n%s%s%s", "The last ", choice,"reading was ");
