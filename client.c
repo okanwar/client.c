@@ -26,9 +26,9 @@
 
 long prompt();
 int connectToHost(char *hostname, char *port);
-void mainLoop(int fd);
+void mainLoop();
 void servefd(int fd, char *buff, size_t buff_len);
-void recievefd(int fd, char *buff, size_t max_len);
+void receivefd(int fd, char *buff, size_t max_len);
 void display_menu();
 void option();
 void parseArgs(const char *cmdline, char **argv);
@@ -55,10 +55,7 @@ void parseArgs(const char *cmdline, char **argv) {
 }
 
 int main() {
-	int fd;
-	fd = connectToHost("comp375.sandiego.edu", 44144);
-	mainLoop(fd);
-	close(fd);
+	mainLoop();
 	return 0;
 }
 
@@ -68,33 +65,26 @@ int main() {
  *
  * @param server_fd Socket file descriptor for communicating with the server
  */
-void mainLoop(int fd) {
+void mainLoop() {
 	while (1) {
 		long selection = prompt();
 		char *choice;
 
 		switch (selection) {
 			case 1:
-				choice = "Air temperature";
-				option(fd, choice);
-				close(fd);
-				fd = connectToHost("comp375.sandiego.edu", "47789");
+				choice = "Air temperature ";
+				option(choice);
 				break;
 			case 2:
-				choice = "Relative humidity";
-				option(fd, choice);
-				close(fd);
-				fd = connectToHost("comp375.sandiego.edu", "47789");
+				choice = "Relative humidity ";
+				option(choice);
 				break;
 			case 3:
 				choice = "Wind speed";
-				option(fd, choice);
-				close(fd);
-				fd = connectToHost("comp375.sandiego.edu", "47789");
+				option(choice);
 				break;
 			case 4:
 				printf("\n%s\n", "GOODBYE!!");
-				close(fd);
 				exit(1);
 				break;
 			default:
@@ -211,7 +201,7 @@ void servefd(int fd, char *buff, size_t buff_len) {
 	}
 }
 
-void recievefd( int fd, char *buff, size_t max_len) {
+void receivefd( int fd, char *buff, size_t max_len) {
 	int recvd = recv(fd, buff, max_len, 0);
 	if (recvd == 0) {
 		printf("Server connection failed, goodbye.\n");
@@ -223,7 +213,9 @@ void recievefd( int fd, char *buff, size_t max_len) {
 	}
 }
 
-void option(int fd, char *choice) {
+void option(char *choice) {
+	
+	int fd = connectToHost("comp375.sandiego.edu", "47789");
 	
 	char buff[BUFF_SIZE];
 	char *buff_reset[BUFF_SIZE];
@@ -232,22 +224,20 @@ void option(int fd, char *choice) {
 	servefd(fd, "AUTH password123\n", 17);
 	
 	//receive message from server and place into buffer	
-	recievefd(fd, buff, BUFF_SIZE);
+	receivefd(fd, buff, BUFF_SIZE);
+	strtok(buff, " ");
+	char *arg1 = strtok(NULL, " ");
+	char *arg2 = strtok(NULL, " ");
 	
-	//parse response into server
-	parseArgs(buff, buff_reset);
-	//Clears buffer so next message can be transmitted
+	int sensor_fd = connectToHost(arg1,arg2);
+	servefd(sensor_fd, "AUTH sensorpass321\n", 21);
 	memset(buff, 0, BUFF_SIZE);
-	parseArgs(buff, buff_reset);
 
-	//connect to server using correct port
-	fd = connectToHost(buff_reset[1],buff_reset[2]);
 
-	servefd(fd, "AUTH sensorpass321\n", 21);
-	recievefd(fd, buff, BUFF_SIZE);
+	receivefd(sensor_fd, buff, BUFF_SIZE);
 	memset(buff, 0, BUFF_SIZE);
-	servefd(fd, choice, 17);
-	recievefd(fd, buff, BUFF_SIZE);
+	servefd(sensor_fd, choice, 17);
+	receivefd(sensor_fd, buff, BUFF_SIZE);
 	memset(buff_reset,0,BUFF_SIZE);
 	parseArgs(buff, buff_reset);
 	
@@ -257,8 +247,14 @@ void option(int fd, char *choice) {
 	
 	//Format output of messages from program
 	printf("\n%s%s%s", "The last ", choice,"reading was ");
-	printf("%s%s%s", buff_reset[1], buff_reset[2], "taken at ");
+	printf("%s%s%s", buff_reset[1], buff_reset[2], " taken at ");
 	printf("%s\n", ctime(&time));
 
 	memset(buff_reset, 0, BUFF_SIZE);
+	servefd(sensor_fd,"CLOSE\n", BUFF_SIZE);
+	receivefd(sensor_fd, buff, BUFF_SIZE);
+	memset(buff, 0, BUFF_SIZE);
+	memset(buff_reset, 0, BUFF_SIZE);
+	close(sensor_fd);
+	close(fd);
 }
