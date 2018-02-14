@@ -14,12 +14,12 @@
 	honesty to better myself and those around me.
 4. Hours spent on project:
 	- Wireshark Analysis: 1
-	- C programming: 8
+	- C programming: 10
 
 5. Missing features and/or known bugs:
 
 6. Project bucks used:
-	- This project:
-	- So far this semester:
+	- This project: 1
+	- So far this semester: 1
 
 7. (Optional) Comments:	
