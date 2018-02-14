@@ -6,7 +6,9 @@
  * USD COMP 375: Computer Networks
  * Project 1
  *
- *
+ *This file is a reverse engineered program of a network application.
+ It was reverse engineered using WireShark and then the corresponding
+ C program was written using the information gained from WireShark.
  */
 
 #define _XOPEN_SOURCE 600
@@ -33,8 +35,16 @@ void display_menu();
 void option();
 void parseArgs(const char *cmdline, char **argv);
 
+//Global Variable used for parseArgs function
 static char cmdline_copy[MAXLINE];
 
+/*
+ * An adopted version of the parseArgs function obtained from COMP280 
+ * projects from last semester to parse the arguments from the command line
+ * 
+ * @param cmdline The string of the command
+ * @param argv A pointer to the array of arguments
+ */
 void parseArgs(const char *cmdline, char **argv) {
 	unsigned int k;
 	for(k = 0; k < sizeof(argv)-1; k++) {
@@ -55,6 +65,8 @@ void parseArgs(const char *cmdline, char **argv) {
 }
 
 int main() {
+
+	//all functinality handled in mainLoop function
 	mainLoop();
 	return 0;
 }
@@ -63,16 +75,20 @@ int main() {
  * Loop to keep asking user what they want to do and calling the appropriate
  * function to handle the selection.
  *
- * @param server_fd Socket file descriptor for communicating with the server
  */
 void mainLoop() {
 	while (1) {
 		long selection = prompt();
+
+		//Used to specify which option was selected and used to format output
 		char *choice;
 
 		switch (selection) {
 			case 1:
 				choice = "Air temperature ";
+				
+				//Call to function that will handle server send and recieve
+				//correspondence
 				option(choice);
 				break;
 			case 2:
@@ -176,7 +192,11 @@ int connectToHost(char *hostname, char *port) {
 	freeaddrinfo(servinfo);
 	return fd;
 }
-
+/*
+ * A function to display the menu options available
+ *
+ * No return value
+ */
 void display_menu() {
 		
 printf("WELCOME TO THE COMP375 SENSOR NETWORK \n\n\n");
@@ -188,7 +208,15 @@ printf("WELCOME TO THE COMP375 SENSOR NETWORK \n\n\n");
 	printf("%s", "4. Quit Program\t\n\n");
 
 }
-
+/*
+ * A function sends message over given socket or exits if something went
+ * wrong.
+ *
+ * @param fd File descriptor of socket to use.
+ * @param buff A pointer to an array where commands from the command line will
+ * be stored to be processed.
+ * @param buff_len The length of the buffer.
+ */
 void servefd(int fd, char *buff, size_t buff_len) {
 	int message_sent = send(fd, buff, buff_len, 0);
 	if (message_sent == 0) {
@@ -201,6 +229,15 @@ void servefd(int fd, char *buff, size_t buff_len) {
 	}
 }
 
+/*
+ * A function that receives messages from given socket or exits if something
+ * went wrong.
+ *
+ * @param fd File descriptor of socket to use. 
+ * @param buff A pointer to an array where commands from the command line will
+ * be stored to be processed.
+ * @param max_len The max length of the buffer
+ */
 void receivefd( int fd, char *buff, size_t max_len) {
 	int recvd = recv(fd, buff, max_len, 0);
 	if (recvd == 0) {
@@ -212,15 +249,27 @@ void receivefd( int fd, char *buff, size_t max_len) {
 		exit(1);
 	}
 }
-
+/*
+ * This function does most of the work in the program. It takes the selection
+ * from the switch statement and sends and recieves messages to and from the
+ * server. This function uses parseArgs function and tokenizing mechanisms to
+ * translate information from the buffer.
+ *
+ * @param choice The selection from the switch statement that directs toward
+ * correct measurement option. 
+ */
 void option(char *choice) {
 	
+	//connect to host using port number
 	int fd = connectToHost("comp375.sandiego.edu", "47789");
 	
+	//buffer and buffer reset used to store and reset messages sent and
+	//recieved by the server.
 	char buff[BUFF_SIZE];
 	char *buff_reset[BUFF_SIZE];
 	
-	//use servefd function to send server message
+	//use servefd function to send server message using information from
+	//WireShark
 	servefd(fd, "AUTH password123\n", 17);
 	
 	//receive message from server and place into buffer	
@@ -229,11 +278,10 @@ void option(char *choice) {
 	char *arg1 = strtok(NULL, " ");
 	char *arg2 = strtok(NULL, " ");
 	
+	//pass parameters that were tokenized from buffer and connect to host
 	int sensor_fd = connectToHost(arg1,arg2);
 	servefd(sensor_fd, "AUTH sensorpass321\n", 21);
 	memset(buff, 0, BUFF_SIZE);
-
-
 	receivefd(sensor_fd, buff, BUFF_SIZE);
 	memset(buff, 0, BUFF_SIZE);
 	servefd(sensor_fd, choice, 17);
@@ -249,7 +297,8 @@ void option(char *choice) {
 	printf("\n%s%s%s", "The last ", choice,"reading was ");
 	printf("%s%s%s", buff_reset[1], buff_reset[2], " taken at ");
 	printf("%s\n", ctime(&time));
-
+	
+	//reset buffer and send message to close server
 	memset(buff_reset, 0, BUFF_SIZE);
 	servefd(sensor_fd,"CLOSE\n", BUFF_SIZE);
 	receivefd(sensor_fd, buff, BUFF_SIZE);
